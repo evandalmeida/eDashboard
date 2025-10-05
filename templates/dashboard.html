@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>P/L Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { --bg:#fff; --muted:#666; --line:#e6e6e9; --chip:#f5f5f7; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin: 24px; color: #111; }
+    h1 { margin: 0 0 12px; }
+    form { margin: 0 0 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;}
+    input, select, button { padding: 8px 10px; border:1px solid var(--line); border-radius:8px; background: #fff; }
+    button { cursor: pointer; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+    .card { border:1px solid var(--line); border-radius:12px; padding:14px; background: var(--bg); }
+    .muted { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .value { font-size: 22px; margin-top: 4px; }
+    .good { color: #0a7b32; }
+    .bad  { color: #a12226; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    th, td { border: 1px solid var(--line); padding: 8px; text-align: right; font-variant-numeric: tabular-nums; }
+    th { background: #f7f7fa; }
+    td:first-child, th:first-child { text-align: left; }
+    .flash { padding:10px 12px; border-radius:8px; border:1px solid var(--line); background: var(--chip); margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h1>P/L Dashboard</h1>
+
+  <form method="post">
+    <label>Start: <input type="date" name="start" value="{{ start }}"></label>
+    <label>End: <input type="date" name="end" value="{{ end }}"></label>
+    <label>
+      Basis:
+      <select name="basis">
+        <option value="total_price" {{ 'selected' if basis=='total_price' else '' }}>total_price</option>
+        <option value="subtotal_price" {{ 'selected' if basis=='subtotal_price' else '' }}>subtotal_price</option>
+        <option value="line_items" {{ 'selected' if basis=='line_items' else '' }}>line_items</option>
+      </select>
+    </label>
+    <button type="submit">Update</button>
+  </form>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="cards">
+    <div class="card">
+      <div class="muted">Shopify Sales</div>
+      <div class="value">{{ kpis.sales_total }}</div>
+    </div>
+    <div class="card">
+      <div class="muted">FB Ad Spend</div>
+      <div class="value">{{ kpis.ad_spend_total }}</div>
+    </div>
+    <div class="card">
+      <div class="muted">CJ Cost</div>
+      <div class="value">{{ kpis.cogs_total }}</div>
+    </div>
+    <div class="card">
+      <div class="muted">Profit</div>
+      {% set profit_num = kpis.profit %}
+      <div class="value">{{ kpis.profit }}</div>
+    </div>
+    <div class="card">
+      <div class="muted">ROI</div>
+      <div class="value">{{ kpis.roi }}</div>
+    </div>
+    <div class="card">
+      <div class="muted">ROAS</div>
+      <div class="value">{{ kpis.roas }}</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Shopify Sales</th>
+        <th>FB Spend</th>
+        <th>CJ Cost</th>
+        <th>Net</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in table_rows %}
+      <tr>
+        <td>{{ r.date }}</td>
+        <td>${{ '%.2f'|format(r.shopify_sales) }}</td>
+        <td>${{ '%.2f'|format(r.fb_spend or 0) }}</td>
+        <td>${{ '%.2f'|format(r.cj_cost or 0) }}</td>
+        {% set net = (r.shopify_sales - ((r.fb_spend or 0) + (r.cj_cost or 0))) %}
+        <td class="{{ 'good' if net >= 0 else 'bad' }}">${{ '%.2f'|format(net) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- If you later want to use charts_json for graphs, it's available here -->
+  <script id="charts-json" type="application/json">{{ charts_json|safe }}</script>
+</body>
+</html>
